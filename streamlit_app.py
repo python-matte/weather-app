@@ -5,7 +5,7 @@ import time
 def get_weather(city):
     # Tomorrow.io API settings
     api_key = OuHALnEfV5NQqakA7FbrAxv4ladrumiE  # Replace with your Tomorrow.io API key
-    url = f"https://api.tomorrow.io/v4/weather/realtime"
+    url = f"curl --request GET --url 'https://api.tomorrow.io/v4/weather/forecast?location=42.3478,-71.0466&apikey=OuHALnEfV5NQqakA7FbrAxv4ladrumiE'"
     
     # Parameters for the API request
     params = {
