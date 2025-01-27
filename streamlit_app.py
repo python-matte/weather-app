@@ -5,20 +5,26 @@ import requests
 def get_weather(location):
     api_key = "OuHALnEfV5NQqakA7FbrAxv4ladrumiE"  # Your Tomorrow.io API key
     url = "https://api.tomorrow.io/v4/weather/realtime"
-    params = {"location": location, "apikey": api_key}
+    params = {
+        "location": location,
+        "units": "metric",  # Ensure data is in Celsius
+        "apikey": api_key
+    }
     
     try:
         response = requests.get(url, params=params)
-        response.raise_for_status()
+        response.raise_for_status()  # Raise an HTTPError for bad responses
         data = response.json()
-        # Extract temperature from the response
+        
+        # Debugging: Log the API response to identify issues
+        st.write(f"Debug - Full API Response: {data}")
+        
+        # Extract temperature
         temperature = data.get('data', {}).get('values', {}).get('temperature')
-        if temperature is not None:
-            return temperature
-        else:
-            return None
+        return temperature
     except requests.exceptions.RequestException as e:
-        return f"Error: {e}"
+        st.error(f"Error fetching weather data: {e}")
+        return None
 
 # Streamlit app
 def main():
@@ -35,7 +41,7 @@ def main():
             st.write(message["content"])
 
     # User input
-    if prompt := st.chat_input("Type a location (e.g., 'Berlin, Germany') and I'll fetch the weather for you! 🌈"):
+    if prompt := st.chat_input("Type a location (e.g., 'Boston, USA') and I'll fetch the weather for you! 🌈"):
         # Display user message
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
@@ -45,10 +51,16 @@ def main():
         with st.chat_message("assistant"):
             with st.spinner("Fetching the latest weather..."):
                 temperature = get_weather(prompt)
-                if temperature:
-                    response = f"✨ The current temperature in **{prompt}** is **{temperature}°C**. Don't forget your shades, babe! 😎☀️"
+                if temperature is not None:
+                    response = (
+                        f"✨ The current temperature in **{prompt}** is **{temperature}°C**. "
+                        "Don't forget your shades, babe! 😎☀️"
+                    )
                 else:
-                    response = "Oops, I couldn't fetch the weather for that location. Maybe double-check the name and try again? 🧐"
+                    response = (
+                        "Oops, I couldn't fetch the weather for that location. "
+                        "Maybe double-check the name and try again? 🧐"
+                    )
                 st.write(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
 
