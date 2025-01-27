@@ -1,32 +1,76 @@
-
 import streamlit as st
 import requests
 
+# Function to retrieve weather data
 def get_weather(location):
-    api_key = "OuHALnEfV5NQqakA7FbrAxv4ladrumiE"  # Your API key
-    # Construct URL exactly like the curl command
-    url = f'https://api.tomorrow.io/v4/weather/forecast?location=42.3478,-71.0466&apikey=OuHALnEfV5NQqakA7FbrAxv4ladrumiE'
+    api_key = "OuHALnEfV5NQqakA7FbrAxv4ladrumiE"  # Replace with your valid API key
+    url = f"https://api.tomorrow.io/v4/weather/forecast?location={location}&apikey={api_key}"
     
     try:
         response = requests.get(url)
-        # Let's print the full response to see what we're getting
-        st.write("Debug - API Response:", response.json())
+        # Handle non-200 status codes
+        if response.status_code != 200:
+            st.error(f"API Error: {response.status_code} - {response.reason}")
+            return None
         
         data = response.json()
         
-        # Check if we have an error message
-        if 'code' in data:
-            st.write(f"Debug - API Error Code: {data['code']}")
-            st.write(f"Debug - API Error Message: {data.get('message', 'No message provided')}")
+        # Validate the response structure
+        if 'data' not in data or 'timelines' not in data['data']:
+            st.error("Unexpected API response structure. Please check the API documentation.")
             return None
-            
-        current_weather = data['data']['timelines'][0]['intervals'][0]['values']
-        return {
-            'temperature': current_weather['temperature'],
-            'precipitationProbability': current_weather['precipitationProbability']
-        }
+        
+        # Extract relevant fields
+        try:
+            current_weather = data['data']['timelines'][0]['intervals'][0]['values']
+            return {
+                'temperature': current_weather.get('temperature', 'N/A'),
+                'precipitationProbability': current_weather.get('precipitationProbability', 'N/A')
+            }
+        except (IndexError, KeyError):
+            st.error("Failed to extract weather details. Check the API response format.")
+            return None
+    except requests.exceptions.RequestException as e:
+        st.error(f"Request Error: {str(e)}")
+        return None
     except Exception as e:
-        st.write(f"Debug - Full Error: {str(e)}")
+        st.error(f"Unexpected Error: {str(e)}")
         return None
 
-# Rest of your code stays the same...
+# Streamlit App
+def main():
+    st.title("Camping Weather Assistant Bot")
+    
+    # User input: Coordinates
+    location = st.text_input("Enter location coordinates (latitude,longitude):", "42.3478,-71.0466")
+    
+    if st.button("Get Weather"):
+        if not validate_coordinates(location):
+            st.error("Invalid coordinates. Please use the format: latitude,longitude (e.g., 42.3478,-71.0466).")
+        else:
+            st.write("Fetching weather data...")
+            weather = get_weather(location)
+            
+            if weather:
+                st.success("Weather data retrieved successfully!")
+                st.write(f"**Temperature:** {weather['temperature']} °C")
+                st.write(f"**Chance of Rain:** {weather['precipitationProbability']} %")
+                
+                # Camping-specific advice
+                if weather['precipitationProbability'] > 50:
+                    st.info("Camping Tip: Bring waterproof gear!")
+                else:
+                    st.info("Camping Tip: Clear skies! Enjoy your trip!")
+            else:
+                st.error("Failed to retrieve weather data. Please try again.")
+
+# Validate input coordinates
+def validate_coordinates(location):
+    try:
+        lat, lon = map(float, location.split(","))
+        return -90 <= lat <= 90 and -180 <= lon <= 180
+    except ValueError:
+        return False
+
+if __name__ == "__main__":
+    main()
