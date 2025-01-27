@@ -8,10 +8,17 @@ def get_weather(location):
     url = f'https://api.tomorrow.io/v4/weather/forecast?location=42.3478,-71.0466&apikey=OuHALnEfV5NQqakA7FbrAxv4ladrumiE'
     
     try:
-        st.write("Debug: Making API call...")
         response = requests.get(url)
-        st.write(f"Debug: Response status: {response.status_code}")
-        return response.json()
+        data = response.json()
+        
+        # Get just the first timeframe's data (current forecast)
+        current_weather = data['data']['timelines'][0]['intervals'][0]['values']
+        
+        # Extract only temperature and precipitation probability
+        return {
+            'temperature': current_weather['temperature'],
+            'precipitationProbability': current_weather['precipitationProbability']
+        }
     except Exception as e:
         st.write(f"Debug: Error - {str(e)}")
         return None
@@ -41,21 +48,28 @@ if user_input:
     # Bot response
     with st.chat_message("bot"):
         if any(word in user_input.lower() for word in ["hey", "hello", "hi"]):
-            response = "Hello! Please enter coordinates (like '42.3478,-71.0466') 🌍"
+            response = "Hello camper! Please enter coordinates (like '42.3478,-71.0466') 🌍"
         else:
             try:
                 weather_data = get_weather(user_input)
-                st.write("Debug: Weather data received:", weather_data)  # Debug line
                 
-                if weather_data and 'data' in weather_data:
-                    # Extract weather info from response
-                    timelines = weather_data['data']['timelines'][0]['intervals'][0]['values']
-                    temp = timelines['temperature']
-                    humidity = timelines['humidity']
+                if weather_data:
+                    temp = weather_data['temperature']
+                    rain_chance = weather_data['precipitationProbability']
                     
-                    response = f"📍 Weather for location {user_input}:\n"
+                    response = f"📍 Weather forecast:\n\n"
                     response += f"🌡️ Temperature: {temp}°C\n"
-                    response += f"💧 Humidity: {humidity}%\n"
+                    response += f"🌧️ Chance of rain: {rain_chance}%\n\n"
+                    
+                    # Add camping advice based on conditions
+                    if rain_chance > 50:
+                        response += "⚠️ High chance of rain! Make sure to bring waterproof gear! ⛺"
+                    elif temp < 10:
+                        response += "🥶 It's going to be cold! Bring warm sleeping bags!"
+                    elif temp > 30:
+                        response += "🌞 It's going to be hot! Bring plenty of water and sun protection!"
+                    else:
+                        response += "👍 Looks like good camping weather!"
                 else:
                     response = "Sorry, I couldn't get the weather data. Please try again."
             except Exception as e:
@@ -65,6 +79,3 @@ if user_input:
         st.write(response)
         st.session_state.messages.append({"role": "bot", "content": response})
 
-# Add debug expander
-with st.expander("🔍 Debug Information"):
-    st.write("Try entering coordinates exactly like this: 42.3478,-71.0466")
